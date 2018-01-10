@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" serverName="kulak">
+  <component name="PublishConfigData" serverName="Kulakovsky">
     <serverData>
-      <paths name="kulak">
+      <paths name="Kulakovsky">
         <serverdata>
           <mappings>
             <mapping deploy="secpunct" local="$PROJECT_DIR$" web="/" />
           </mappings>
           <excludedPaths>
-            <excludedPath path="/secpunct/nucleosomes" />
+            <excludedPath path="/secpunct/data" />
           </excludedPaths>
         </serverdata>
       </paths>

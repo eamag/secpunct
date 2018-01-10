@@ -57,26 +57,43 @@ def make_uplift_csv():
     return uplifted
 
 
-def s15_30(uplifted):
+def make_filtered_s15_30():
     """
-make Nucleosome-centered positions of sec. structures plot, counts positions of sec.structures' nucleotides
+make clean dataframe with 5 columns almost without duplicates
+Unnamed: 0	    start	end	      len_stem	       len_loop
+    :return: this df
     """
     base_path = "/home/shared/STEMLOOPS/hg19/S15-30_L0-10_M5"
     filename = "chr1.fna.S15-30_L0-10_M5.pal"
     path_to_file = os.path.join(base_path, filename)
     with open(path_to_file, 'r') as f:
-        #     next(f)  # if there is description line
+        #     next(f)  # if there is a description line
         splitted = f.read().split('\n')  # raw file separated by \n's
 
     from tqdm import tqdm_notebook as tqdm
-
     cols = ['start', 'end', 'len_stem', 'len_loop']  # , 'seq_left', 'seq_right', 'full_seq', '1', '2', '3']
-    df = pd.DataFrame([sub.split("\t")[:4] for sub in tqdm(splitted[:1000000])],
-                      columns=cols)  # TODO: full file (30 times bigger)
-    df = df.apply(pd.to_numeric)
-    df.head()
+    # will do in 2 parts because file is too big
 
-    cumsum_arr = np.zeros((1000))
+    df1 = pd.DataFrame([sub.split("\t")[:4] for sub in tqdm(splitted[:10000000])], columns=cols)
+    df1 = df1.apply(pd.to_numeric)
+    df1 = df1.drop_duplicates(subset=['start']).drop_duplicates(['end'])
+
+    df2 = pd.DataFrame([sub.split("\t")[:4] for sub in tqdm(splitted[10000000:])], columns=cols)
+    df2 = df2.apply(pd.to_numeric)
+    df2 = df2.drop_duplicates(subset=['start']).drop_duplicates(['end'])
+
+    df = pd.concat([df1, df2])
+    df.dropna(inplace=True)
+    df.to_csv('chr1.S15-30.filtered.csv')
+    return df
+
+
+def s15_30(uplifted, df):
+    """
+make Nucleosome-centered positions of sec. structures plot, counts positions of sec.structures' nucleotides
+    """
+
+    cumsum_arr = np.zeros(1000)
 
     for peak_pos in tqdm(pd.to_numeric(uplifted.peak_pos)):
         temp_df = df[(df['start'] > peak_pos - 500) & (df['end'] < peak_pos + 500)]
@@ -107,14 +124,13 @@ second part - Structure-centered positions of nucleosomes, counts positions of n
         splitted = f.read().split('\n')  # raw file separated by \n's
 
     cols = ['start', 'end', 'len_stem', 'len_loop']  # , 'seq_left', 'seq_right', 'full_seq', '1', '2', '3']
-    df = pd.DataFrame([sub.split("\t")[:4] for sub in tqdm(splitted)],
-                      columns=cols)  # TODO: full file (30 times bigger)
+    df = pd.DataFrame([sub.split("\t")[:4] for sub in tqdm(splitted)], columns=cols)
     df = df.apply(pd.to_numeric)
     df.drop(df.tail(1).index, inplace=True)
     df['center'] = df[['start', 'end']].mean(axis=1).astype('int')
     df.tail()
 
-    cumsum_arr = np.zeros((1000))
+    cumsum_arr = np.zeros(1000)
 
     for peak_pos in tqdm(pd.to_numeric(uplifted.peak_pos)):
         temp_df = df[(df['start'] > peak_pos - 500) & (df['end'] < peak_pos + 500)]
@@ -135,7 +151,7 @@ second part - Structure-centered positions of nucleosomes, counts positions of n
     uplifted = uplifted.apply(pd.to_numeric)
     uplifted.tail()
 
-    cumsum_arr = np.zeros((1000))
+    cumsum_arr = np.zeros(1000)
 
     for peak_pos in tqdm(df.center):
         temp_df = uplifted[(uplifted['start'] > peak_pos - 500) & (uplifted['end'] < peak_pos + 500)]
@@ -168,7 +184,7 @@ see s15_30
     df = df.apply(pd.to_numeric)
     df.tail()
 
-    cumsum_arr = np.zeros((1000))
+    cumsum_arr = np.zeros(1000)
 
     for peak_pos in tqdm(pd.to_numeric(uplifted.peak_pos)):
         temp_df = df[(df['start'] > peak_pos - 500) & (df['end'] < peak_pos + 500)]
@@ -182,3 +198,18 @@ see s15_30
     plt.ylabel('Number of sec. structures')
     plt.xlabel('Centered position')
     plt.savefig('Chr1_quadruplexes_centered_plot.png')
+
+
+def make_10bp(df, uplifted):
+    """
+Выделить все структуры, у которых основание ножки находятся на расстоянии от 0 до 10 нуклеотидов от границы нуклеосомы.
+    :param df: sec. struct. df
+    :param uplifted: nucleosome df
+    """
+    arr_4_rows = []
+    for start_upl in tqdm(pd.to_numeric(uplifted.start)):
+        temp_df = df[(df['end'] > start_upl - 10) & (df['end'] < start_upl)]
+        if not temp_df.empty:
+            for ind, row in temp_df.iterrows():
+                arr_4_rows.append(row)
+    pd.DataFrame(arr_4_rows).to_csv('sec_struct_0-10bp_to_nucleosome.csv', index=False)
