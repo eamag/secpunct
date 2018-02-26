@@ -1,6 +1,6 @@
+# coding=utf-8
 # get_ipython().run_line_magic('matplotlib', 'inline')
 import matplotlib.pyplot as plt
-import seaborn as sns
 import numpy as np
 import os
 import pandas as pd
@@ -108,9 +108,6 @@ make Nucleosome-centered positions of sec. structures plot, counts positions of 
     plt.savefig('Chr1_S15-30_centered_plot.png')
 
 
-# ### Because S15-30 gave irrelevant result, we'll test S16-50
-
-
 def s16_50(uplifted):
     """
 see s15_30
@@ -203,6 +200,7 @@ see s15_30
 def make_10bp(df, uplifted):
     """
 Выделить все структуры, у которых основание ножки находятся на расстоянии от 0 до 10 нуклеотидов от границы нуклеосомы.
+#TODO: think about 10-40bp (30 is length of dna polymerase)
     :param df: sec. struct. df
     :param uplifted: nucleosome df
     """
@@ -212,4 +210,45 @@ def make_10bp(df, uplifted):
         if not temp_df.empty:
             for ind, row in temp_df.iterrows():
                 arr_4_rows.append(row)
-    pd.DataFrame(arr_4_rows).to_csv('sec_struct_0-10bp_to_nucleosome.csv', index=False)
+    ss10bp = pd.DataFrame(arr_4_rows)
+    ss10bp.to_csv('sec_struct_0-10bp_to_nucleosome.csv', index=False)
+
+    from Bio import SeqIO
+    first_record = str(next(SeqIO.parse("/home/shared/hg19/chr1.fna", "fasta")).seq)
+
+    temp = pd.DataFrame(np.ndarray((ss10bp.shape[0], 3)), columns=["struct", "before", "after"], dtype='str')
+    for idx, row in ss10bp.iterrows():
+        temp.loc[idx][0] = first_record[row['start']:row['end']]
+        temp.loc[idx][1] = first_record[row['start'] - 20:row['start']]
+        temp.loc[idx][2] = first_record[row['end']:row['end'] + 20]
+
+    ss10bp = pd.concat([ss10bp, temp], axis=1)
+    return ss10bp
+
+
+def make_go_terms(ss10bp):
+    """
+makes go_terms.csv for pasting to http://revigo.irb.hr/ and getting genes and their types
+also makes relevant_goa_names.csv for names of this genes
+    :return:
+    """
+    ptt = pd.read_csv('data/ptt_hg19.txt', delimiter='\t')
+    ptt1 = ptt[ptt['chrom'] == 'chr1']
+
+    def make_10bp_pr(df, uplifted):
+        arr_4_rows = []
+        for start_upl in tqdm(pd.to_numeric(uplifted.end)):
+            temp_df = df[(df['txStart'] - 1000 < start_upl) & (df['txEnd'] > start_upl) & (df.strand == '+')]
+            if not temp_df.empty:
+                for ind, row in temp_df.iterrows():
+                    arr_4_rows.append(row)
+        return pd.DataFrame(arr_4_rows)
+
+    relevant_ptt = make_10bp_pr(ptt1, ss10bp)
+
+    goa = pd.read_csv('data/goa_human.gaf', delimiter='\t', header=None)
+
+    relevant_goa = goa[goa[1].isin(relevant_ptt.proteinID)].drop_duplicates(1)
+    relevant_goa[9].to_csv('data/relevant_goa_names.csv')
+
+    relevant_goa[4].to_csv('data/go_terms.csv', index=False)
