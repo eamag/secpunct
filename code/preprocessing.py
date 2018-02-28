@@ -200,7 +200,6 @@ see s15_30
 def make_10bp(df, uplifted):
     """
 Выделить все структуры, у которых основание ножки находятся на расстоянии от 0 до 10 нуклеотидов от границы нуклеосомы.
-#TODO: think about 10-40bp (30 is length of dna polymerase)
     :param df: sec. struct. df
     :param uplifted: nucleosome df
     """
