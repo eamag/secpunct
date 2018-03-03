@@ -211,17 +211,6 @@ def make_10bp(df, uplifted):
                 arr_4_rows.append(row)
     ss10bp = pd.DataFrame(arr_4_rows)
     ss10bp.to_csv('sec_struct_0-10bp_to_nucleosome.csv', index=False)
-
-    from Bio import SeqIO
-    first_record = str(next(SeqIO.parse("/home/shared/hg19/chr1.fna", "fasta")).seq)
-
-    temp = pd.DataFrame(np.ndarray((ss10bp.shape[0], 3)), columns=["struct", "before", "after"], dtype='str')
-    for idx, row in ss10bp.iterrows():
-        temp.loc[idx][0] = first_record[row['start']:row['end']]
-        temp.loc[idx][1] = first_record[row['start'] - 20:row['start']]
-        temp.loc[idx][2] = first_record[row['end']:row['end'] + 20]
-
-    ss10bp = pd.concat([ss10bp, temp], axis=1)
     return ss10bp
 
 
@@ -251,3 +240,40 @@ also makes relevant_goa_names.csv for names of this genes
     relevant_goa[9].to_csv('data/relevant_goa_names.csv')
 
     relevant_goa[4].to_csv('data/go_terms.csv', index=False)
+
+
+def add_bp_according2_start_end(neg_example):
+    """
+adds nucleotides string according to start-end columns
+    :param neg_example: DataFrame with start-end columns
+    """
+    from Bio import SeqIO
+    first_record = str(next(SeqIO.parse("/home/shared/hg19/chr1.fna", "fasta")).seq)
+
+    temp = pd.DataFrame(np.ndarray((neg_example.shape[0], 4)),
+                        columns=["struct", "before", "after", 'half_struct'], dtype='str')
+    for idx, row in neg_example.iterrows():
+        temp.loc[idx][0] = first_record[row['start']:row['end']]
+        temp.loc[idx][1] = first_record[row['start'] - 20:row['start']]
+        temp.loc[idx][2] = first_record[row['end']:row['end']    + 20]
+        temp.loc[idx][3] = first_record[row['start']:row['start'] + (row['end'] - row['start'])//2]
+
+    return pd.concat([neg_example, temp], axis=1)
+
+
+def calc_feats(concated, position='struct'):
+    """
+calculate features from diprodb
+    :param position: struct, before, after or half_struct
+    :param concated: df with bp as after add_bp_according2_start_end
+    """
+    diprodb = pd.read_csv('../data/dprops.csv', index_col=0)
+    import re
+    features = []
+    for struct in tqdm(concated.loc[:, concated.columns != 'value'][position]):
+        strl = re.findall('..', struct)
+        temp = []
+        for dyad in strl:
+            temp.append(diprodb[diprodb['PropertyName'] == dyad].values.tolist()[0])
+        features.append(pd.DataFrame(temp, columns=diprodb.columns).sum())
+    return pd.DataFrame(features)

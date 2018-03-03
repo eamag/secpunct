@@ -57,3 +57,25 @@ https://lvdmaaten.github.io/tsne/
     plt.clim(-0.5, 9.5)
     return plt
     # plt.show()
+    # or we can do this and label relevant vs random
+    # diprodb = pd.read_csv('../data/dprops.csv', index_col=0)
+    #
+    # features = []
+    # for struct in tqdm(concated.loc[:, concated.columns != 'value']['before']):
+    #     strl = re.findall('..', struct)
+    #     temp = []
+    #     for dyad in strl:
+    #         temp.append(diprodb[diprodb['PropertyName'] == dyad].values.tolist()[0])
+    #     features.append(pd.DataFrame(temp, columns=diprodb.columns).sum())
+    # features = pd.DataFrame(features)
+    #
+    # tsne = TSNE(n_jobs=8)
+    # transformed = tsne.fit_transform(features.loc[:, features.columns != 'PropertyName'])
+    #
+    # vis_x = transformed[:, 0]
+    # vis_y = transformed[:, 1]
+    #
+    # plt.scatter(vis_x, vis_y, c=concated['value'].map({0: 'blue', 1: 'orange'}))
+    # # plt.clim(-0.5, 9.5)
+    # plt.show()
+
