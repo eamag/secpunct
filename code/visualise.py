@@ -27,24 +27,25 @@ simple plot with peaks in places where structure/nucl is
     return plt
 
 
-def plot_tsne(ss10bp, position='struct'):
+def plot_tsne(features, position='struct'):
     """
 form  physical features dataframe and use t-sne on it
 https://lvdmaaten.github.io/tsne/
+    :param features: DataFrame of features
     :param position: before, after or struct for position relative to structure
-    :param ss10bp: see preprocessing.py, sec. structs within 10bp from nucleosome
+    :param ss10bp: (deprecated) see preprocessing.py, sec. structs within 10bp from nucleosome
     :return: plt for plt.show()
     """
-    diprodb = pd.read_csv('data/dprops.csv', index_col=0)
+    diprodb = pd.read_csv('../data/dprops.csv', index_col=0)
 
-    features = []
-    for struct in tqdm(ss10bp[position]):
-        strl = re.findall('..', struct)
-        temp = []
-        for dyad in strl:
-            temp.append(diprodb[diprodb['PropertyName'] == dyad].values.tolist()[0])
-        features.append(pd.DataFrame(temp, columns=diprodb.columns).sum())
-    features = pd.DataFrame(features)
+    # features = []
+    # for struct in tqdm(ss10bp[position]):
+    #     strl = re.findall('..', struct)
+    #     temp = []
+    #     for dyad in strl:
+    #         temp.append(diprodb[diprodb['PropertyName'] == dyad].values.tolist()[0])
+    #     features.append(pd.DataFrame(temp, columns=diprodb.columns).sum())
+    # features = pd.DataFrame(features)
 
 
     tsne = TSNE(n_jobs=8)
@@ -79,3 +80,14 @@ https://lvdmaaten.github.io/tsne/
     # # plt.clim(-0.5, 9.5)
     # plt.show()
 
+
+def plot_feat_import(features, model, y_test, y_pred):
+    df_fi = pd.DataFrame(features.columns[1:], columns=['feature'])
+    df_fi['importance'] = list(model.feature_importance('gain'))
+    df_fi.sort_values('importance', ascending=False, inplace=True)
+    # print(df_fi)
+    plt.figure()
+    df_fi.head(10).plot(kind='barh', x='feature', y='importance')
+    plt.title('Roc_auc is {}'.format(roc_auc_score(y_test, y_pred)))
+    plt.xlabel('relative importance')
+    return plt

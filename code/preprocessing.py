@@ -179,7 +179,13 @@ see s15_30
     df.columns = cols
     df.drop(['seq', 'chr'], axis=1, inplace=True)
     df = df.apply(pd.to_numeric)
-    df.tail()
+
+    # # or you can open it like this:
+    # all_quad_coords = pd.read_csv('/home/konovalovdmitry/results/all_quad_coords.tsv', sep='\t', header=None)
+    # all_quad_coords = all_quad_coords[all_quad_coords[0] == 'chr1']
+    # cols = ['chr', 'start', 'end']
+    # all_quad_coords.columns = cols
+    # df = all_quad_coords.copy()
 
     cumsum_arr = np.zeros(1000)
 
@@ -211,16 +217,16 @@ def make_10bp(df, uplifted):
                 arr_4_rows.append(row)
     ss10bp = pd.DataFrame(arr_4_rows)
     ss10bp.to_csv('sec_struct_0-10bp_to_nucleosome.csv', index=False)
-    return ss10bp
+    return ss10bp.reset_index(drop=True)
 
 
-def make_go_terms(ss10bp):
+def make_go_terms(ss10bp, suffix='quad'):
     """
 makes go_terms.csv for pasting to http://revigo.irb.hr/ and getting genes and their types
 also makes relevant_goa_names.csv for names of this genes
     :return:
     """
-    ptt = pd.read_csv('data/ptt_hg19.txt', delimiter='\t')
+    ptt = pd.read_csv('../data/ptt_hg19.txt', delimiter='\t')
     ptt1 = ptt[ptt['chrom'] == 'chr1']
 
     def make_10bp_pr(df, uplifted):
@@ -234,12 +240,11 @@ also makes relevant_goa_names.csv for names of this genes
 
     relevant_ptt = make_10bp_pr(ptt1, ss10bp)
 
-    goa = pd.read_csv('data/goa_human.gaf', delimiter='\t', header=None)
+    goa = pd.read_csv('../data/goa_human.gaf', delimiter='\t', header=None)
 
     relevant_goa = goa[goa[1].isin(relevant_ptt.proteinID)].drop_duplicates(1)
-    relevant_goa[9].to_csv('data/relevant_goa_names.csv')
-
-    relevant_goa[4].to_csv('data/go_terms.csv', index=False)
+    relevant_goa[9].to_csv('../data/relevant_goa_names_{}.csv'.format(suffix))
+    relevant_goa[4].to_csv('../data/go_terms_{}.csv'.format(suffix), index=False)
 
 
 def add_bp_according2_start_end(neg_example):
@@ -277,3 +282,17 @@ calculate features from diprodb
             temp.append(diprodb[diprodb['PropertyName'] == dyad].values.tolist()[0])
         features.append(pd.DataFrame(temp, columns=diprodb.columns).sum())
     return pd.DataFrame(features)
+
+
+def make_neg_example_and_concat(df, quad10with_bps):
+    """
+    :param df: DataFrame with start-end coordinates
+    :param quad10with_bps: second DataFrame to be concated (ie ss10bp)
+    :return: concated df for feature calculations
+    """
+    neg_example = df.sample(5000).reset_index(drop=True)
+    neg_example = add_bp_according2_start_end(neg_example)
+    neg_example['value'] = 0
+    quad10with_bps['value'] = 1
+    concated = pd.concat([neg_example, quad10with_bps])
+    return concated
