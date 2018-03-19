@@ -7,3 +7,4 @@ Work on this research: https://docs.google.com/document/d/15fnkS3t_-PSZ33vVn_vBZ
 - [x] Binary LightGBM to predict relevant sec.struct (different phys. properties)
 - [x] Repeat all for quadruplexes
 - [ ] Repeat all for different chromosomes
+- [x] Check logreg for feature importance and r-score instead of roc-auc
