@@ -1,8 +1,9 @@
 # coding=utf-8
 # get_ipython().run_line_magic('matplotlib', 'inline')
+import os
+
 import matplotlib.pyplot as plt
 import numpy as np
-import os
 import pandas as pd
 from tqdm import tqdm_notebook as tqdm
 
@@ -220,11 +221,28 @@ def make_10bp(df, uplifted):
     return ss10bp.reset_index(drop=True)
 
 
+def make_n_bp(df, uplifted, n=70):
+    """
+Return all 'df' elements where end in range n before start of 'uplifted'
+    :param n: max number of bp from df.end to uplifted.start
+    :param df: sec. struct. df with columns start   end len_stem    len_loop (10941426 rows)
+    :param uplifted: nucleosome df with columns chrom   start   end peak_pos    score (1037956 rows)
+    """
+    df1 = df.sort_values('end').reset_index(drop=True)
+    # getting indexes where should df.end be, if inserted into uplifted
+    indexes = np.searchsorted(uplifted.start.values, df1.end.values)
+    uplifted1 = uplifted.append(uplifted.tail(1))  # for df.end > uplifted.start.max()
+    uplifted_ind = uplifted1.iloc[indexes].reset_index(drop=True)  # getting all uplifted.start closest to df.end
+    uplifted_ind['df_end'] = df1.end.values
+    uplifted_ind['diff'] = uplifted_ind.start - uplifted_ind.df_end
+    mask = (uplifted_ind['diff'] >= 0) & (uplifted_ind['diff'] < n)
+    return df1[mask].reset_index(drop=True)
+
+
 def make_go_terms(ss10bp, suffix='quad'):
     """
 makes go_terms.csv for pasting to http://revigo.irb.hr/ and getting genes and their types
 also makes relevant_goa_names.csv for names of this genes
-    :return:
     """
     ptt = pd.read_csv('../data/ptt_hg19.txt', delimiter='\t')
     ptt1 = ptt[ptt['chrom'] == 'chr1']
