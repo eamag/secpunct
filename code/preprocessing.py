@@ -1,4 +1,3 @@
-# coding=utf-8
 # get_ipython().run_line_magic('matplotlib', 'inline')
 import os
 
@@ -83,30 +82,10 @@ Unnamed: 0	    start	end	      len_stem	       len_loop
     df2 = df2.apply(pd.to_numeric)
     df2 = df2.drop_duplicates(subset=['start']).drop_duplicates(['end'])
 
-    df = pd.concat([df1, df2])
+    df = pd.concat([df1, df2]).reset_index(drop=True)
     df.dropna(inplace=True)
     df.to_csv('chr1.S15-30.filtered.csv')
     return df
-
-
-def s15_30(uplifted, df):
-    """
-make Nucleosome-centered positions of sec. structures plot, counts positions of sec.structures' nucleotides
-    """
-
-    cumsum_arr = np.zeros(1000)
-
-    for peak_pos in tqdm(pd.to_numeric(uplifted.peak_pos)):
-        temp_df = df[(df['start'] > peak_pos - 500) & (df['end'] < peak_pos + 500)]
-        for ind, row in temp_df.iterrows():
-            for i in range(int(row['start']) - peak_pos + 500, int(row['end']) - peak_pos + 500):
-                cumsum_arr[i] += 1
-
-    x = np.arange(-500, 500)
-    plt.plot(x, cumsum_arr)
-    plt.ylabel('Number of sec. structures')
-    plt.xlabel('Nucleosome-centered positions of sec. structures')
-    plt.savefig('Chr1_S15-30_centered_plot.png')
 
 
 def s16_50(uplifted):
@@ -284,6 +263,20 @@ adds nucleotides string according to start-end columns
     return pd.concat([neg_example, temp], axis=1)
 
 
+def make_neg_example_and_concat(df, quad10with_bps):
+    """
+    :param df: DataFrame with start-end coordinates
+    :param quad10with_bps: second DataFrame to be concated (ie ss10bp)
+    :return: concated df for feature calculations
+    """
+    neg_example = df.sample(5000).reset_index(drop=True)
+    neg_example = add_bp_according2_start_end(neg_example)
+    neg_example['value'] = 0
+    quad10with_bps['value'] = 1
+    concated = pd.concat([neg_example, quad10with_bps])
+    return concated
+
+
 def calc_feats(concated, position='struct'):
     """
 calculate features from diprodb
@@ -300,17 +293,3 @@ calculate features from diprodb
             temp.append(diprodb[diprodb['PropertyName'] == dyad].values.tolist()[0])
         features.append(pd.DataFrame(temp, columns=diprodb.columns).sum())
     return pd.DataFrame(features)
-
-
-def make_neg_example_and_concat(df, quad10with_bps):
-    """
-    :param df: DataFrame with start-end coordinates
-    :param quad10with_bps: second DataFrame to be concated (ie ss10bp)
-    :return: concated df for feature calculations
-    """
-    neg_example = df.sample(5000).reset_index(drop=True)
-    neg_example = add_bp_according2_start_end(neg_example)
-    neg_example['value'] = 0
-    quad10with_bps['value'] = 1
-    concated = pd.concat([neg_example, quad10with_bps])
-    return concated
