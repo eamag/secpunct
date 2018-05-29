@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import six
 from MulticoreTSNE import MulticoreTSNE as TSNE  # https://github.com/DmitryUlyanov/Multicore-TSNE
 from tqdm import tqdm_notebook as tqdm
 
@@ -100,15 +101,39 @@ Center uplifted on "peak_pos", create array with number of sec struct in df in r
     :param uplifted: nucleosome positioning
     :return:
     """
-    cumsum_arr = np.zeros((1000))
+    cumsum_arr = np.zeros(1000)
     for peak_pos in tqdm(pd.to_numeric(uplifted.peak_pos)):
         temp_df = df[(df['start'] > peak_pos - 500) & (df['end'] < peak_pos + 500)]
         for ind, row in temp_df.iterrows():
             for i in range(int(row['start']) - peak_pos + 500, int(row['end']) - peak_pos + 500):
                 cumsum_arr[i] += 1
     x = np.arange(-500, 500)
-    plt.plot(x, cumsum_arr)
+    # plt.plot(x, cumsum_arr)
     # plt.ylabel('Количество вторичных структур')
     # plt.xlabel('Позиция относительно центра нуклеосомы')
     # plt.ylim(75000, 110000)
-    return plt
+    return x, cumsum_arr
+
+
+def render_mpl_table(data, title='test', col_width=3.0, row_height=0.625, font_size=14,
+                     header_color='#40466e', row_colors=['#f1f1f2', 'w'], edge_color='w',
+                     bbox=[0, 0, 1, 1], header_columns=0,
+                     ax=None, **kwargs):
+    if ax is None:
+        size = (np.array(data.shape[::-1]) + np.array([0, 1])) * np.array([col_width, row_height])
+        fig, ax = plt.subplots(figsize=size)
+        ax.axis('off')
+    fig.suptitle(title, fontsize=15)
+
+    mpl_table = ax.table(cellText=data.values, bbox=bbox, colLabels=data.columns, **kwargs)
+
+    mpl_table.auto_set_font_size(False)
+    mpl_table.set_fontsize(font_size)
+    for k, cell in six.iteritems(mpl_table._cells):
+        cell.set_edgecolor(edge_color)
+        if k[0] == 0 or k[1] < header_columns:
+            cell.set_text_props(weight='bold', color='w')
+            cell.set_facecolor(header_color)
+        else:
+            cell.set_facecolor(row_colors[k[0] % len(row_colors)])
+    return ax
